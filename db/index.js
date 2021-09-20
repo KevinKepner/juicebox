@@ -1,7 +1,5 @@
 const { Client } = require('pg');
-
-const client = new Client('postgres://localhost:5432/juicebox-dev');
-
+const client = new Client(process.env.DATABASE_URL || 'postgres://localhost:5432/juicebox-dev');
 const getAllUsers = async () => {
   try {
     const { rows } = await client.query(
@@ -227,6 +225,13 @@ const getPostById = async (postId) => {
     WHERE id = $1;
     `, [postId]);
 
+    if (!post) {
+      throw {
+        name: 'PostNotFound',
+        message: 'Could not find a post with that postId'
+      };
+    }
+
     const { rows: tags } = await client.query(`
       SELECT tags.*
       FROM tags
@@ -269,6 +274,32 @@ const getPostsByTagName= async (tagName) => {
   }
 }
 
+const getAllTags = async () => {
+  try {
+    const { rows: tags } = await client.query(`
+      SELECT * FROM tags;
+    `);
+
+    return tags;
+  } catch (error) {
+    console.error(error);
+  } 
+}
+
+const getUserByUsername = async (username) => {
+  try {
+    const { rows: [user] } = await client.query(`
+      SELECT *
+      FROM users
+      WHERE username=$1;
+    `, [username]);
+    
+    return user;
+  } catch (error) {
+    throw error;
+  }
+}
+
 module.exports = {
   client,
   getAllUsers,
@@ -283,7 +314,8 @@ module.exports = {
   createPostTag,
   addTagsToPost,
   getPostById,
-  getPostsByTagName
+  getPostsByTagName,
+  getAllTags,
+  getUserByUsername
 }
-
 // supply the db name and location of the database
